@@ -6,15 +6,14 @@
 
 [![hacs][hacsbadge]][hacs]
 
-_Integration to integrate with [FlashForge][flashforge]._
+_Integration to integrate with [FlashForge 3D printers][flashforge]._
 
 **This integration will set up the following platforms.**
 
 Platform | Description
 -- | --
-`binary_sensor` | Show something `True` or `False`.
-`sensor` | Show info from blueprint API.
-`switch` | Switch something `True` or `False`.
+`sensor` | Show info from your 3d printer. <ul><li>temp sensors (bed and extruder)</li><li>Print progress</li><li>Printer status</li></ul>
+`camera` | Printer camera if exists.
 
 ## Installation
 
