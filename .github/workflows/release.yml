@@ -17,15 +17,15 @@ jobs:
         shell: "bash"
         run: |
           yq -i -o json '.version="${{ github.event.release.tag_name }}"' \
-            "${{ github.workspace }}/custom_components/FlashForge/manifest.json"
+            "${{ github.workspace }}/custom_components/flashforge/manifest.json"
 
       - name: "ZIP the integration directory"
         shell: "bash"
         run: |
-          cd "${{ github.workspace }}/custom_components/FlashForge"
+          cd "${{ github.workspace }}/custom_components/flashforge"
           zip FlashForge.zip -r ./
 
       - name: "Upload the ZIP file to the release"
         uses: softprops/action-gh-release@v0.1.15
         with:
-          files: ${{ github.workspace }}/custom_components/FlashForge/FlashForge.zip
+          files: ${{ github.workspace }}/custom_components/flashforge/FlashForge.zip
