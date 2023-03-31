@@ -1,18 +1,18 @@
 {
-  "domain": "flashforge",
-  "name": "Flashforge",
-  "config_flow": true,
-  "documentation": "https://github.com/joseffallman/hass_flashforge",
-  "issue_tracker": "https://github.com/joseffallman/hass_flashforge/issues",
-  "requirements": [
-    "ffpp==0.0.11"
-  ],
-  "dependencies": [
-    "network"
-  ],
   "codeowners": [
     "@joseffallman"
   ],
+  "config_flow": true,
+  "documentation": "https://github.com/joseffallman/hass_flashforge",
+  "domain": "flashforge",
+  "dependencies": [
+    "network"
+  ],
   "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/joseffallman/hass_flashforge/issues",
+  "name": "Flashforge",
+  "requirements": [
+    "ffpp==0.0.11"
+  ],
   "version": "0.1"
 }
