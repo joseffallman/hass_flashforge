@@ -5,7 +5,9 @@
     "@joseffallman"
   ],
   "config_flow": true,
-  "dependencies": [],
+  "dependencies": [
+    "network"
+  ],
   "documentation": "https://github.com/joseffallman/hass_flashforge",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/joseffallman/hass_flashforge/issues",
