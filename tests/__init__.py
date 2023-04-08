@@ -2,13 +2,13 @@
 
 from typing import Any
 
+import pytest
 import voluptuous as vol
-
-from homeassistant.components.flashforge.const import CONF_SERIAL_NUMBER, DOMAIN
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT
 from homeassistant.core import HomeAssistant
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from tests.common import MockConfigEntry
+from custom_components.flashforge.const import CONF_SERIAL_NUMBER, DOMAIN
 
 
 def get_schema_default(schema: vol.Schema, key_name: str) -> Any:
@@ -36,6 +36,7 @@ def get_schema_suggested(schema: vol.Schema, key_name: str) -> Any:
     raise KeyError(f"{key_name} not in schema.")
 
 
+@pytest.mark.asyncio
 async def init_integration(
     hass: HomeAssistant, skip_setup: bool = False
 ) -> MockConfigEntry:

@@ -1,7 +1,7 @@
 {
     "name": "ludeeus/integration_blueprint",
     "image": "mcr.microsoft.com/vscode/devcontainers/python:0-3.10-bullseye",
-    "postCreateCommand": "scripts/setup",
+    "postCreateCommand": "sudo scripts/setup",
     "forwardPorts": [
         8123
     ],
@@ -9,9 +9,10 @@
         "vscode": {
             "extensions": [
                 "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.isort",
                 "github.vscode-pull-request-github",
-                "ryanluker.vscode-coverage-gutters",
-                "ms-python.vscode-pylance"
+                "ryanluker.vscode-coverage-gutters"
             ],
             "settings": {
                 "files.eol": "\n",
@@ -25,7 +26,13 @@
                 "editor.formatOnPaste": false,
                 "editor.formatOnSave": true,
                 "editor.formatOnType": true,
-                "files.trimTrailingWhitespace": true
+                "files.trimTrailingWhitespace": true,
+                "isort.args": [
+                    "--profile=black"
+                ],
+                "editor.codeActionsOnSave": {
+                    "source.organizeImports": true
+                }
             }
         }
     },

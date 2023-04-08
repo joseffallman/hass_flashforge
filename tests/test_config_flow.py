@@ -2,16 +2,21 @@
 
 from unittest.mock import MagicMock
 
+import pytest
 from homeassistant import config_entries, data_entry_flow
-from homeassistant.components.flashforge.const import CONF_SERIAL_NUMBER, DOMAIN
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT, CONF_SOURCE
 from homeassistant.core import HomeAssistant
 
+from custom_components.flashforge.const import CONF_SERIAL_NUMBER, DOMAIN
+
 from . import get_schema_default, get_schema_suggested, init_integration
 
 
-async def test_user_flow(hass: HomeAssistant, mock_printer_network: MagicMock):
+@pytest.mark.asyncio
+async def test_user_flow(
+    enable_custom_integrations, hass: HomeAssistant, mock_printer_network: MagicMock
+):
     """Test the manual user flow."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: config_entries.SOURCE_USER}
@@ -39,7 +44,9 @@ async def test_user_flow(hass: HomeAssistant, mock_printer_network: MagicMock):
     assert entries[0].unique_id == "SNADVA1234567"
 
 
+@pytest.mark.asyncio
 async def test_user_flow_auto_discover(
+    enable_custom_integrations,
     hass: HomeAssistant,
     mock_printer_network: MagicMock,
     mock_printer_discovery: MagicMock,
@@ -77,7 +84,9 @@ async def test_user_flow_auto_discover(
     assert result["type"] == data_entry_flow.RESULT_TYPE_CREATE_ENTRY
 
 
+@pytest.mark.asyncio
 async def test_auto_discover_no_devices(
+    enable_custom_integrations,
     hass: HomeAssistant,
     mock_printer_network: MagicMock,
     mock_printer_discovery: MagicMock,
@@ -97,7 +106,9 @@ async def test_auto_discover_no_devices(
     assert result["type"] == data_entry_flow.RESULT_TYPE_ABORT
 
 
+@pytest.mark.asyncio
 async def test_auto_discover_device_error(
+    enable_custom_integrations,
     hass: HomeAssistant,
     mock_printer_network: MagicMock,
     mock_printer_discovery: MagicMock,
@@ -117,7 +128,10 @@ async def test_auto_discover_device_error(
     assert result["type"] == data_entry_flow.RESULT_TYPE_ABORT
 
 
-async def test_connection_timeout(hass: HomeAssistant, mock_printer_network: MagicMock):
+@pytest.mark.asyncio
+async def test_connection_timeout(
+    enable_custom_integrations, hass: HomeAssistant, mock_printer_network: MagicMock
+):
     """Test what happens if there is a connection timeout."""
     mock_printer_network.connect.side_effect = TimeoutError("timeout")
 
@@ -136,7 +150,10 @@ async def test_connection_timeout(hass: HomeAssistant, mock_printer_network: Mag
     assert get_schema_default(schema, CONF_PORT) == 8899
 
 
-async def test_connection_error(hass: HomeAssistant, mock_printer_network: MagicMock):
+@pytest.mark.asyncio
+async def test_connection_error(
+    enable_custom_integrations, hass: HomeAssistant, mock_printer_network: MagicMock
+):
     """Test what happens if there is a connection Error."""
     mock_printer_network.connect.side_effect = ConnectionError("conn_error")
 
@@ -152,8 +169,9 @@ async def test_connection_error(hass: HomeAssistant, mock_printer_network: Magic
     assert result["errors"] == {CONF_IP_ADDRESS: "cannot_connect"}
 
 
+@pytest.mark.asyncio
 async def test_user_device_exists_abort(
-    hass: HomeAssistant, mock_printer_network: MagicMock
+    enable_custom_integrations, hass: HomeAssistant, mock_printer_network: MagicMock
 ):
     """Test if device is already configured."""
     await init_integration(hass)
@@ -170,7 +188,10 @@ async def test_user_device_exists_abort(
     assert result["reason"] == "already_configured"
 
 
-async def test_unload_integration(hass: HomeAssistant, mock_printer_network: MagicMock):
+@pytest.mark.asyncio
+async def test_unload_integration(
+    enable_custom_integrations, hass: HomeAssistant, mock_printer_network: MagicMock
+):
     """Test of unload integration."""
     entry = await init_integration(hass)
 
@@ -179,8 +200,11 @@ async def test_unload_integration(hass: HomeAssistant, mock_printer_network: Mag
     assert entry.state is ConfigEntryState.NOT_LOADED
 
 
+@pytest.mark.asyncio
 async def test_printer_not_responding(
-    hass: HomeAssistant, mock_printer_network: MagicMock
+    enable_custom_integrations,  # type: ignore
+    hass: HomeAssistant,
+    mock_printer_network: MagicMock,
 ):
     """Test if printer not responding during setup."""
     mock_printer_network.connect.side_effect = ConnectionError("conn_error")

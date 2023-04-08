@@ -1,10 +1,14 @@
 """Fixtures for Flashforge integration tests."""
 
-
 from itertools import cycle
 from unittest.mock import MagicMock, patch
 
 import pytest
+import pytest_asyncio
+from homeassistant.core import HomeAssistant
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.flashforge.const import DOMAIN
 
 from .const_response import (
     MACHINE_INFO,
@@ -38,3 +42,16 @@ def mock_printer_discovery() -> MagicMock:
     with patch("ffpp.Discovery.getPrinters", autospec=True) as get_printers:
         get_printers.return_value = [("Adventurer4", "192.168.0.64")]
         yield get_printers
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def unload_integration(hass: HomeAssistant) -> None:
+    """Try to unload the Flashforge integration after each test."""
+    yield
+
+    entries = hass.config_entries.async_entries(DOMAIN)
+    if entries:
+        entry: MockConfigEntry
+        for entry in entries:
+            await hass.config_entries.async_unload(entry.entry_id)
+            await hass.async_block_till_done()

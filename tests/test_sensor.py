@@ -1,11 +1,13 @@
 """Tests for the Flashforge sensors."""
 from unittest.mock import MagicMock
 
-from homeassistant.components.flashforge.const import DOMAIN
+import pytest
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+from custom_components.flashforge.const import DOMAIN
 
 from . import init_integration
 
@@ -49,7 +51,10 @@ SENSORS = (
 )
 
 
-async def test_sensors(hass: HomeAssistant, mock_printer_network: MagicMock):
+@pytest.mark.asyncio
+async def test_sensors(
+    enable_custom_integrations, hass: HomeAssistant, mock_printer_network: MagicMock
+):
     """Test Flashforge sensors."""
     await init_integration(hass)
     registry = entity_registry.async_get(hass)
@@ -63,8 +68,9 @@ async def test_sensors(hass: HomeAssistant, mock_printer_network: MagicMock):
         assert entry.unique_id == expected["unique_id"]
 
 
+@pytest.mark.asyncio
 async def test_unload_integration_and_sensors(
-    hass: HomeAssistant, mock_printer_network: MagicMock
+    enable_custom_integrations, hass: HomeAssistant, mock_printer_network: MagicMock
 ):
     """Test Flashforge sensors are unavailable and then deleted when integration."""
     entry = await init_integration(hass)
@@ -83,8 +89,9 @@ async def test_unload_integration_and_sensors(
     assert state is None
 
 
+@pytest.mark.asyncio
 async def test_sensor_update_error(
-    hass: HomeAssistant, mock_printer_network: MagicMock
+    enable_custom_integrations, hass: HomeAssistant, mock_printer_network: MagicMock
 ):
     """Test Flashforge sensors are unavailable after an update error."""
     entry = await init_integration(hass)
@@ -102,8 +109,9 @@ async def test_sensor_update_error(
         assert state.state == STATE_UNAVAILABLE
 
 
+@pytest.mark.asyncio
 async def test_sensor_update_error2(
-    hass: HomeAssistant, mock_printer_network: MagicMock
+    enable_custom_integrations, hass: HomeAssistant, mock_printer_network: MagicMock
 ):
     """Test Flashforge sensors are unavailable after an update error."""
     entry = await init_integration(hass)
