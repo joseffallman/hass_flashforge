@@ -15,21 +15,24 @@ Platform | Description
 `sensor` | Show info from your 3d printer. <ul><li>temp sensors (bed and extruder)</li><li>Print progress</li><li>Printer status</li></ul>
 `camera` | Printer camera if exists.
 
-## Installation
-
+# Installation
+## Manual installation process.
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
 1. If you do not have a `custom_components` directory (folder) there, you need to create it.
 1. In the `custom_components` directory (folder) create a new folder called `flashforge`.
 1. Download _all_ the files from the `custom_components/flashforge/` directory (folder) in this repository.
 1. Place the files you downloaded in the new directory (folder) you created.
+## Install through HACS
+1. Add this repo as a custom repo in HACS by clicking on the three dots in the right corner in HACS
+1. Select "custom repositories" and add "joseffallman/hass_flashforge" as a integration category.
 1. Restart Home Assistant
-1. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "FlashForge"
 
 ## Configuration is done in the UI
-
+1. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "FlashForge"
 <!---->
 
-## Contributions are welcome!
+
+# Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
 
