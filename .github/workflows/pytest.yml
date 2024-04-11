@@ -9,29 +9,29 @@ on:
 
 jobs:
   tests:
-    
+
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.12"]
 
     steps:
     - uses: szenius/set-timezone@v1.2
       with:
         timezoneLinux: "Europe/Stockholm"
-        
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        
+
     - uses: actions/checkout@v4
-      
+
     - name: Install dependencies
       run: |
         python3 -m pip install -r requirements.txt
         python3 -m pip install pytest-md pytest-emoji
-        
+
     - uses: pavelzw/pytest-action@v2
       with:
         emoji: false
