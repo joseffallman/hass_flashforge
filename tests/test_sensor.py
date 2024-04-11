@@ -14,25 +14,25 @@ from . import init_integration
 SENSORS = (
     {
         "entity_id": "sensor.adventurer4_extruder_current",
-        "state": "198",
+        "state": "198.0",
         "name": "Adventurer4 Extruder Current",
         "unique_id": "SNADVA1234567_extruder_current",
     },
     {
         "entity_id": "sensor.adventurer4_extruder_target",
-        "state": "210",
+        "state": "210.0",
         "name": "Adventurer4 Extruder Target",
         "unique_id": "SNADVA1234567_extruder_target",
     },
     {
         "entity_id": "sensor.adventurer4_bed_current",
-        "state": "48",
+        "state": "48.0",
         "name": "Adventurer4 Bed Current",
         "unique_id": "SNADVA1234567_bed_current",
     },
     {
         "entity_id": "sensor.adventurer4_bed_target",
-        "state": "64",
+        "state": "64.0",
         "name": "Adventurer4 Bed Target",
         "unique_id": "SNADVA1234567_bed_target",
     },
