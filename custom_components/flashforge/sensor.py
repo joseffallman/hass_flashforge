@@ -21,6 +21,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .data_update_coordinator import FlashForgeDataUpdateCoordinator
 
+import logging
+_LOGGER = logging.getLogger(__name__)
 
 @dataclass
 class FlashforgeSensorEntityDescription(SensorEntityDescription):
@@ -40,6 +42,41 @@ SENSORS: tuple[FlashforgeSensorEntityDescription, ...] = (
         icon="mdi:file-percent",
         native_unit_of_measurement=PERCENTAGE,
         value_fnc=lambda printer: printer.print_percent,
+    ),
+    FlashforgeSensorEntityDescription(
+        key="file",
+        icon="mdi:file-cad",
+        value_fnc=lambda printer: printer.job_file,
+    ),
+    FlashforgeSensorEntityDescription(
+        key="layers",
+        icon="mdi:layers-triple",
+        value_fnc=lambda printer: printer.job_layers,
+    ),
+    FlashforgeSensorEntityDescription(
+        key="print_layer",
+        icon="mdi:layers-edit",
+        value_fnc=lambda printer: printer.print_layer,
+    ),
+    FlashforgeSensorEntityDescription(
+        key="mac_address",
+        icon="mdi:network-pos",
+        value_fnc=lambda printer: printer.mac_address,
+    ),
+    FlashforgeSensorEntityDescription(
+        key="serial",
+        icon="mdi:printer-3d",
+        value_fnc=lambda printer: printer.serial,
+    ),
+    FlashforgeSensorEntityDescription(
+        key="print_status",
+        icon="mdi:printer-3d",
+        value_fnc=lambda printer: printer.status,
+    ),
+    FlashforgeSensorEntityDescription(
+        key="move_mode",
+        icon="mdi:move-resize",
+        value_fnc=lambda printer: printer.move_mode,
     ),
 )
 TEMP_SENSORS: tuple[FlashforgeSensorEntityDescription, ...] = (
@@ -66,7 +103,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the available FlashForge sensors platform."""
-
+    _LOGGER.debug("async_setup_entry- sensors")
     coordinator: FlashForgeDataUpdateCoordinator = hass.data[DOMAIN][
         config_entry.entry_id
     ]
@@ -104,6 +141,7 @@ async def async_setup_entry(
                 )
 
     for description in SENSORS:
+        _LOGGER.debug(f"setup {description}")
         entities.append(
             FlashForgeSensor(
                 coordinator=coordinator,
