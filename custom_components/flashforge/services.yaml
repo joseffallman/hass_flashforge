@@ -1,18 +1,18 @@
 pause:
-  name: pause
+  name: Pause
   description: Pause current print.
 continue_print:
-  name: continue_print
-  description: continue current print.
+  name: Continue print
+  description: Continue current print.
 abort:
-  name: abort
+  name: Abort
   description: Abort current print.
 get_file_names:
-  name: get file names
+  name: Get file names
   description: Get the files that stored in printer.
 print_file:
-  name: print file
-  description: print file from printer
+  name: Print file
+  description: Print file stored in printer.
   fields:
     file_name:
       name: "file name"

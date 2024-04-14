@@ -1,19 +1,22 @@
 """Button platform that offers a PrinterButton entity."""
-from __future__ import annotations
-import logging
-from typing import Final
 
+from __future__ import annotations
+
+import logging
 
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from .data_update_coordinator import FlashForgeDataUpdateCoordinator
-from homeassistant.helpers.entity_registry import async_get as get_entity_registry
 
 from . import DOMAIN
+from .data_update_coordinator import FlashForgeDataUpdateCoordinator
 
-_LOGGER: Final = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -24,7 +27,7 @@ async def async_setup_entry(
         config_entry.entry_id
     ]
 
-    printer_network=coordinator.printer.network
+    printer_network = coordinator.printer.network
     async_add_entities(
         [
             PrinterButton(
@@ -32,35 +35,30 @@ async def async_setup_entry(
                 icon="mdi:stop",
                 coordinator=coordinator,
                 hass=hass,
-                action=printer_network.sendAbortRequest
-
+                action=printer_network.sendAbortRequest,
             ),
             PrinterButton(
-                name="play",
+                name="continue",
                 icon="mdi:play",
                 hass=hass,
                 coordinator=coordinator,
-                action=printer_network.sendContinueRequest
-
+                action=printer_network.sendContinueRequest,
             ),
             PrinterButton(
                 name="pause",
                 icon="mdi:pause",
                 hass=hass,
                 coordinator=coordinator,
-                action=printer_network.sendPauseRequest
-
+                action=printer_network.sendPauseRequest,
             ),
-            PrinterButton(
-                name="print",
+            FilePrinterButton(
+                name="print_file",
                 icon="mdi:printer-3d-nozzle",
                 hass=hass,
                 coordinator=coordinator,
-                action=printer_network.sendPrintRequest
-
+                action=printer_network.sendPrintRequest,
             ),
         ]
-
     )
 
 
@@ -76,26 +74,34 @@ class PrinterButton(ButtonEntity):
         name,
         icon,
         hass: HomeAssistant,
-        coordinator,
+        coordinator: FlashForgeDataUpdateCoordinator,
         action,
     ) -> None:
         """Initialize the Demo button entity."""
-        self._attr_unique_id = coordinator.config_entry.unique_id+"_"+name
+        self._attr_unique_id = f"{coordinator.config_entry.unique_id}_{name}"
         self._attr_icon = icon
-        self._attr_name=name
-        self._action=action
+        self._attr_name = f"{name.replace('_', ' ').title()}"
+        self._action = action
         self._attr_device_info = coordinator.device_info
-        self._coordinator=coordinator
-        self._hass=hass
-
+        self._coordinator = coordinator
 
     async def async_press(self) -> None:
         """Send out a persistent notification."""
-        if self.name=='print':
-            registry = get_entity_registry(self._hass)
-            file_select_entity=next((x for x in registry.entities if registry.entities.get(x).unique_id == self._coordinator.config_entry.unique_id+"_select" ))
-            result=await self._action(file=self._hass.states.get(file_select_entity).state)
-        else:
-            result=await self._action()
-        _LOGGER.debug(f"result: {result} ")
-        #self.hass.bus.async_fire("demo_button_pressed")
+        result = await self._action()
+        _LOGGER.debug(f"Flashforge printer responded with: {result}")
+
+
+class FilePrinterButton(PrinterButton):
+    """Representation of a file print button entity."""
+
+    async def async_press(self) -> None:
+        """Send out a persistent notification."""
+        entityRegistry = entity_registry.async_get(self._coordinator.hass)
+        select_entity = entityRegistry.async_get_entity_id(
+            Platform.SELECT,
+            DOMAIN,
+            f"{self._coordinator.config_entry.unique_id}_select",
+        )
+        select_state = self._coordinator.hass.states.get(select_entity)
+        result = await self._action(file=select_state.state)
+        _LOGGER.debug(f"Flashforge printer responded with: {result}")

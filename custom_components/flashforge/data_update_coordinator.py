@@ -1,10 +1,9 @@
 """DataUpdateCoordinator for flashforge integration."""
 
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 from ffpp.Printer import ConnectionStatus, Printer
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -67,6 +66,8 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
         model = self.printer.machine_type
         name = self.printer.machine_name
         firmware = self.printer.firmware
+        sn = self.printer.serial
+        mac = self.printer.mac_address
 
         return DeviceInfo(
             identifiers={(DOMAIN, unique_id)},
@@ -74,4 +75,6 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
             model=model,
             name=name,
             sw_version=firmware,
+            serial_number=sn,
+            hw_version=mac,
         )

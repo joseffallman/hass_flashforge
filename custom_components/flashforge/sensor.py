@@ -1,11 +1,13 @@
 """Add Flashforge sensors."""
+
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from ffpp.Printer import Printer, temperatures as Tool
-
+from ffpp.Printer import Printer
+from ffpp.Printer import temperatures as Tool
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -21,8 +23,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .data_update_coordinator import FlashForgeDataUpdateCoordinator
 
-import logging
 _LOGGER = logging.getLogger(__name__)
+
 
 @dataclass
 class FlashforgeSensorEntityDescription(SensorEntityDescription):
@@ -57,16 +59,6 @@ SENSORS: tuple[FlashforgeSensorEntityDescription, ...] = (
         key="print_layer",
         icon="mdi:layers-edit",
         value_fnc=lambda printer: printer.print_layer,
-    ),
-    FlashforgeSensorEntityDescription(
-        key="mac_address",
-        icon="mdi:network-pos",
-        value_fnc=lambda printer: printer.mac_address,
-    ),
-    FlashforgeSensorEntityDescription(
-        key="serial",
-        icon="mdi:printer-3d",
-        value_fnc=lambda printer: printer.serial,
     ),
     FlashforgeSensorEntityDescription(
         key="print_status",
