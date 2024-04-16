@@ -10,6 +10,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .data_update_coordinator import FlashForgeDataUpdateCoordinator
 
+_LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -33,7 +35,7 @@ class FlashForgeSelect(SelectEntity):
     _attr_name = None
     _attr_should_poll = False
 
-    def __init__(self, coordinator, options) -> None:
+    def __init__(self, coordinator: FlashForgeDataUpdateCoordinator, options) -> None:
         """Initialize the Demo select entity."""
         self._attr_unique_id = coordinator.config_entry.unique_id + "_select"
         self._attr_current_option = options[0]
@@ -46,3 +48,12 @@ class FlashForgeSelect(SelectEntity):
         """Update the current selected option."""
         self._attr_current_option = option
         self.async_write_ha_state()
+    
+    async def async_update(self) -> None:
+        """Get the latest data."""
+        _LOGGER.debug("async_update")
+        files= await self._coordinator.printer.network.sendGetFileNames()
+        for n, value in enumerate(files):
+            files[n] = value.removeprefix("/data/")
+        _LOGGER.debug(f"list of files:" {files}")
+        self._attr_options=files
