@@ -1,0 +1,20 @@
+pause:
+  name: Pause
+  description: Pause current print.
+continue_print:
+  name: Continue print
+  description: Continue current print.
+abort:
+  name: Abort
+  description: Abort current print.
+get_file_names:
+  name: Get file names
+  description: Get the files that stored in printer.
+print_file:
+  name: Print file
+  description: Print file stored in printer.
+  fields:
+    file_name:
+      name: "file name"
+      description: "Filename without /data/ prefix!"
+      example: "Apos_PLA_14m16s.gcode"

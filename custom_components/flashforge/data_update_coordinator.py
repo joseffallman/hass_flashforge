@@ -1,10 +1,9 @@
 """DataUpdateCoordinator for flashforge integration."""
 
-from datetime import timedelta
 import logging
+from datetime import timedelta
 
 from ffpp.Printer import ConnectionStatus, Printer
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -43,12 +42,14 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
         """Update data via API."""
         try:
             await self.printer.update()
+            files = await self.printer.network.sendGetFileNames()
+            if not files:
+                files = []
+            files = [f.removeprefix("/data/") for f in files]
         except (TimeoutError, ConnectionError) as err:
             raise UpdateFailed(err) from err
 
-        return {
-            "status": self.printer.machine_status,
-        }
+        return {"status": self.printer.machine_status, "files": files}
 
     async def async_config_entry_first_refresh(self):
         """Connect to printer and update with machine info."""
@@ -67,6 +68,8 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
         model = self.printer.machine_type
         name = self.printer.machine_name
         firmware = self.printer.firmware
+        sn = self.printer.serial
+        mac = self.printer.mac_address
 
         return DeviceInfo(
             identifiers={(DOMAIN, unique_id)},
@@ -74,4 +77,6 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
             model=model,
             name=name,
             sw_version=firmware,
+            serial_number=sn,
+            hw_version=mac,
         )
