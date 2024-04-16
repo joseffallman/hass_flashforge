@@ -83,7 +83,7 @@ class PrinterButton(ButtonEntity):
         self._attr_name = f"{name.replace('_', ' ').title()}"
         self._action = action
         self._attr_device_info = coordinator.device_info
-        self._coordinator = coordinator
+        self.coordinator = coordinator
 
     async def async_press(self) -> None:
         """Send out a persistent notification."""
@@ -96,12 +96,12 @@ class FilePrinterButton(PrinterButton):
 
     async def async_press(self) -> None:
         """Send out a persistent notification."""
-        entityRegistry = entity_registry.async_get(self._coordinator.hass)
+        entityRegistry = entity_registry.async_get(self.coordinator.hass)
         select_entity = entityRegistry.async_get_entity_id(
             Platform.SELECT,
             DOMAIN,
-            f"{self._coordinator.config_entry.unique_id}_select",
+            f"{self.coordinator.config_entry.unique_id}_select",
         )
-        select_state = self._coordinator.hass.states.get(select_entity)
+        select_state = self.coordinator.hass.states.get(select_entity)
         result = await self._action(file=select_state.state)
         _LOGGER.debug(f"Flashforge printer responded with: {result}")

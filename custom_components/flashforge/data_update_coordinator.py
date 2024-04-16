@@ -42,12 +42,14 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
         """Update data via API."""
         try:
             await self.printer.update()
+            files = await self.printer.network.sendGetFileNames()
+            if not files:
+                files = []
+            files = [f.removeprefix("/data/") for f in files]
         except (TimeoutError, ConnectionError) as err:
             raise UpdateFailed(err) from err
 
-        return {
-            "status": self.printer.machine_status,
-        }
+        return {"status": self.printer.machine_status, "files": files}
 
     async def async_config_entry_first_refresh(self):
         """Connect to printer and update with machine info."""
