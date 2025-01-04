@@ -3,10 +3,11 @@
 from unittest.mock import MagicMock
 
 import pytest
-from homeassistant import config_entries, data_entry_flow
+from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT, CONF_SOURCE
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.flashforge.const import CONF_SERIAL_NUMBER, DOMAIN
 
@@ -21,7 +22,7 @@ async def test_user_flow(
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={CONF_SOURCE: config_entries.SOURCE_USER}
     )
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == FlowResultType.FORM
     assert not result["errors"]
     schema = result["data_schema"].schema
     assert get_schema_default(schema, CONF_PORT) == 8899
@@ -39,7 +40,7 @@ async def test_user_flow(
     assert result["data"][CONF_PORT] == 8899
     assert result["data"][CONF_SERIAL_NUMBER] == "SNADVA1234567"
     assert result["title"] == "Adventurer4"
-    assert result["type"] == data_entry_flow.RESULT_TYPE_CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
     entries = hass.config_entries.async_entries(DOMAIN)
     assert entries[0].unique_id == "SNADVA1234567"
 
@@ -61,7 +62,7 @@ async def test_user_flow_auto_discover(
     )
 
     # Assert that we found mocked printer.
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["description_placeholders"] == {
         "machine_name": "Adventurer4",
         "ip_addr": "192.168.0.64",
@@ -81,7 +82,7 @@ async def test_user_flow_auto_discover(
     assert result["data"][CONF_PORT] == 8899
     assert result["data"][CONF_SERIAL_NUMBER] == "SNADVA1234567"
     assert result["title"] == "Adventurer4"
-    assert result["type"] == data_entry_flow.RESULT_TYPE_CREATE_ENTRY
+    assert result["type"] == FlowResultType.CREATE_ENTRY
 
 
 @pytest.mark.asyncio
@@ -103,7 +104,7 @@ async def test_auto_discover_no_devices(
 
     # Assert that no devices discovered.
     assert result["reason"] == "no_devices_found"
-    assert result["type"] == data_entry_flow.RESULT_TYPE_ABORT
+    assert result["type"] == FlowResultType.ABORT
 
 
 @pytest.mark.asyncio
@@ -125,7 +126,7 @@ async def test_auto_discover_device_error(
 
     # Assert that no devices discovered.
     assert result["reason"] == "no_devices_found"
-    assert result["type"] == data_entry_flow.RESULT_TYPE_ABORT
+    assert result["type"] == FlowResultType.ABORT
 
 
 @pytest.mark.asyncio
@@ -143,7 +144,7 @@ async def test_connection_timeout(
             CONF_PORT: 8899,
         },
     )
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {CONF_IP_ADDRESS: "cannot_connect"}
     schema = result["data_schema"].schema
     assert get_schema_suggested(schema, CONF_IP_ADDRESS) == "127.0.0.1"
@@ -165,7 +166,7 @@ async def test_connection_error(
             CONF_PORT: 8899,
         },
     )
-    assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
+    assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {CONF_IP_ADDRESS: "cannot_connect"}
 
 
@@ -184,7 +185,7 @@ async def test_user_device_exists_abort(
             CONF_PORT: 8899,
         },
     )
-    assert result["type"] == data_entry_flow.RESULT_TYPE_ABORT
+    assert result["type"] == FlowResultType.ABORT
     assert result["reason"] == "already_configured"
 
 
