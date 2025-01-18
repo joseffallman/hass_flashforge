@@ -10,7 +10,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DEFAULT_NAME, DOMAIN, SCAN_INTERVAL
+from .const import DEFAULT_NAME, DOMAIN, MAX_FAILED_UPDATES, SCAN_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
             name=f"{DEFAULT_NAME}-{config_entry.entry_id}",
             update_interval=timedelta(seconds=SCAN_INTERVAL),
             update_method=self.async_update_data,
+            always_update=False,
         )
         self.config_entry = config_entry
         self.printer = printer
@@ -37,6 +38,7 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
         self.data = {
             "status": None,
         }
+        self.failedupdates = 0
 
     async def async_update_data(self):
         """Update data via API."""
@@ -46,8 +48,15 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
             if not files:
                 files = []
             files = [f.removeprefix("/data/") for f in files]
+            self.failedupdates = 0
         except (TimeoutError, ConnectionError) as err:
-            raise UpdateFailed(err) from err
+            # raise UpdateFailed(err) from err
+            if self.failedupdates >= MAX_FAILED_UPDATES:
+                self.failedupdates = 0
+                raise UpdateFailed(err) from err
+            else:
+                self.failedupdates += 1
+                return await self.async_update_data()
 
         return {"status": self.printer.machine_status, "files": files}
 

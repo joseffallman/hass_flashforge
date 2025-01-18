@@ -1,4 +1,5 @@
 """Tests for the Flashforge sensors."""
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -7,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from custom_components.flashforge.const import DOMAIN
+from custom_components.flashforge.const import DOMAIN, MAX_FAILED_UPDATES
 
 from . import init_integration
 
@@ -115,6 +116,7 @@ async def test_sensor_update_error2(
 ):
     """Test Flashforge sensors are unavailable after an update error."""
     entry = await init_integration(hass)
+    INIT_CALL_COUNT = 3
 
     # Change printer respond.
     mock_printer_network.sendStatusRequest.side_effect = TimeoutError("timeout")
@@ -124,6 +126,10 @@ async def test_sensor_update_error2(
     await coordinator.async_request_refresh()
     await hass.async_block_till_done()
 
+    assert (
+        mock_printer_network.sendStatusRequest.call_count
+        == INIT_CALL_COUNT + MAX_FAILED_UPDATES
+    )
     for expected in SENSORS:
         state = hass.states.get(expected["entity_id"])
         assert state.state == STATE_UNAVAILABLE
