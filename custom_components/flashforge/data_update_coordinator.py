@@ -30,7 +30,6 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
             name=f"{DEFAULT_NAME}-{config_entry.entry_id}",
             update_interval=timedelta(seconds=SCAN_INTERVAL),
             update_method=self.async_update_data,
-            always_update=False,
         )
         self.config_entry = config_entry
         self.printer = printer
