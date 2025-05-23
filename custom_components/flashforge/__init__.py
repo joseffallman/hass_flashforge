@@ -13,16 +13,21 @@ from homeassistant.exceptions import HomeAssistantError
 from .const import DOMAIN
 from .data_update_coordinator import FlashForgeDataUpdateCoordinator
 
-PLATFORMS = [Platform.SENSOR, Platform.CAMERA, Platform.SELECT, Platform.BUTTON]
+PLATFORMS = [
+    Platform.SENSOR,
+    Platform.CAMERA,
+    Platform.SELECT,
+    Platform.BUTTON,
+    Platform.LIGHT,
+]
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Flashforge from a config entry."""
-    _LOGGER.debug("async_setup_entry")
     printer = Printer(entry.data[CONF_IP_ADDRESS], port=entry.data[CONF_PORT])
-    _LOGGER.debug("printer setup")
+    _LOGGER.debug("FlashForge printer setup")
     coordinator = FlashForgeDataUpdateCoordinator(hass, printer, entry)
     await coordinator.async_config_entry_first_refresh()
     # Save the coordinator object to be able to access it later on.
@@ -81,6 +86,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    await coordinator.async_request_refresh()
     return True
 
 
