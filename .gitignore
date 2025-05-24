@@ -11,6 +11,8 @@ __pycache__
 # .vscode
 coverage.xml
 
+custom_components/integration_blueprint
+
 
 # Home Assistant configuration
 .cloud
@@ -26,3 +28,11 @@ tts
 scenes.yaml
 scripts.yaml
 secrets.yaml
+.vscode
+coverage.xml
+.ruff_cache
+
+
+# Home Assistant configuration
+config/*
+config/configuration.yaml

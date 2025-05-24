@@ -6,6 +6,12 @@
             "type": "shell",
             "command": "scripts/develop",
             "problemMatcher": []
+        },
+        {
+            "label": "Update dev env from template repo",
+            "type": "shell",
+            "command": "git merge template/main --allow-unrelated-histories --no-ff --no-commit",
+            "problemMatcher": []
         }
     ]
 }
