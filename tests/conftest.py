@@ -27,10 +27,16 @@ def mock_printer_network() -> MagicMock:
     with patch("ffpp.Printer.Network", autospec=True) as mock_network:
         network = mock_network.return_value
         network.sendInfoRequest.return_value = MACHINE_INFO
-        network.sendStatusRequest.side_effect = cycle([STATUS_READY, STATUS_PRINTING])
-        network.sendTempRequest.side_effect = cycle([TEMP_READY, TEMP_PRINTING])
+
+        # Integration is reading two times when it starts.
+        network.sendStatusRequest.side_effect = cycle(
+            [STATUS_READY, STATUS_READY, STATUS_PRINTING]
+        )
+        network.sendTempRequest.side_effect = cycle(
+            [TEMP_READY, TEMP_READY, TEMP_PRINTING]
+        )
         network.sendProgressRequest.side_effect = cycle(
-            [PROGRESS_READY, PROGRESS_PRINTING]
+            [PROGRESS_READY, PROGRESS_READY, PROGRESS_PRINTING]
         )
 
         yield network
