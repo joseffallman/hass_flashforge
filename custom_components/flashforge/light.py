@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 
 # Import the device class from the component that you want to support
-from homeassistant.components.light import LightEntity
+from homeassistant.components.light import ColorMode, LightEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -49,6 +49,9 @@ class FlashForgeLightEntity(CoordinatorEntity, LightEntity):
         self._attr_device_info = coordinator.device_info
         self._attr_name = "Light"
         self._attr_unique_id = coordinator.config_entry.unique_id + "_light"
+
+        self.supported_color_modes = ColorMode.ONOFF
+        self.color_mode = ColorMode.ONOFF
 
     @callback
     def _handle_coordinator_update(self) -> None:
