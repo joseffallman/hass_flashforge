@@ -50,11 +50,11 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
             self.failedupdates = 0
         except (TimeoutError, ConnectionError) as err:
             # raise UpdateFailed(err) from err
+            self.failedupdates += 1
             if self.failedupdates >= MAX_FAILED_UPDATES:
                 self.failedupdates = 0
                 raise UpdateFailed(err) from err
             else:
-                self.failedupdates += 1
                 return await self.async_update_data()
 
         return {"status": self.printer.machine_status, "files": files}

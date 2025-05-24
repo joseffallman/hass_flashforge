@@ -102,7 +102,7 @@ async def test_sensor_update_error(
 
     # Request sensor update.
     coordinator: DataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    await coordinator.async_request_refresh()
+    await coordinator.async_refresh()
     await hass.async_block_till_done()
 
     for expected in SENSORS:
@@ -123,7 +123,7 @@ async def test_sensor_update_error2(
 
     # Request sensor update.
     coordinator: DataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
-    await coordinator.async_request_refresh()
+    await coordinator.async_refresh()
     await hass.async_block_till_done()
 
     assert (
