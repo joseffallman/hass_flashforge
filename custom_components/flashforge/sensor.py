@@ -3,34 +3,46 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from ffpp.Printer import Printer
-from ffpp.Printer import temperatures as Tool
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfTemperature
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .data_update_coordinator import FlashForgeDataUpdateCoordinator
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from ffpp.Printer import Printer
+    from ffpp.Printer import temperatures as Tool  # noqa: N812
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from .data_update_coordinator import FlashForgeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class FlashforgeSensorEntityDescription(SensorEntityDescription):
     """Sensor entity description with added value fnc."""
 
-    value_fnc: Callable[[Printer | Tool], str | int | None] | None = None
+    value_fnc: Callable[[Printer], str | int | None] | None = None
+
+
+@dataclass(frozen=True)
+class FlashforgeTempSensorEntityDescription(FlashforgeSensorEntityDescription):
+    """Sensor entity description for temperature sensors."""
+
+    value_fnc: Callable[[Tool], float] | None = None
 
 
 SENSORS: tuple[FlashforgeSensorEntityDescription, ...] = (
@@ -72,14 +84,14 @@ SENSORS: tuple[FlashforgeSensorEntityDescription, ...] = (
     ),
 )
 TEMP_SENSORS: tuple[FlashforgeSensorEntityDescription, ...] = (
-    FlashforgeSensorEntityDescription(
+    FlashforgeTempSensorEntityDescription(
         key="_current",
         value_fnc=lambda tool: tool.now,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
     ),
-    FlashforgeSensorEntityDescription(
+    FlashforgeTempSensorEntityDescription(
         key="_target",
         value_fnc=lambda tool: tool.target,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
@@ -110,30 +122,28 @@ async def async_setup_entry(
                 else "extruder"
             )
             for description in TEMP_SENSORS:
-                entities.append(
-                    FlashForgeSensor(
-                        coordinator=coordinator,
-                        description=description,
-                        name=name,
-                        tool_name=tool.name,
-                    )
+                sensor = FlashForgeTempSensor(
+                    coordinator=coordinator,
+                    description=description,
+                    name=name,
+                    tool_name=tool.name,
                 )
+                entities.append(sensor)
 
         # Loop all beds and add current and target temp sensors.
         for i, tool in enumerate(coordinator.printer.bed_tools):
             name = f"bed{i}" if len(coordinator.printer.bed_tools) > 1 else "bed"
             for description in TEMP_SENSORS:
-                entities.append(
-                    FlashForgeSensor(
-                        coordinator=coordinator,
-                        description=description,
-                        name=name,
-                        tool_name=tool.name,
-                    )
+                sensor = FlashForgeTempSensor(
+                    coordinator=coordinator,
+                    description=description,
+                    name=name,
+                    tool_name=tool.name,
                 )
+                entities.append(sensor)
 
     for description in SENSORS:
-        _LOGGER.debug(f"setup {description}")
+        _LOGGER.debug(f"setup {description}")  # noqa: G004
         entities.append(
             FlashForgeSensor(
                 coordinator=coordinator,
@@ -162,7 +172,11 @@ class FlashForgeSensor(CoordinatorEntity, SensorEntity):
         self._device_id = coordinator.config_entry.unique_id
         self._attr_device_info = coordinator.device_info
         self.entity_description = description
-        self._attr_name = f"{coordinator.printer.machine_name} {name.title()}{description.key.replace('_', ' ').title()}"
+        self._attr_name = (
+            f"{coordinator.config_entry.title}"
+            f" {name.title()}"
+            f"{description.key.replace('_', ' ').title()}"
+        )
         self._attr_unique_id = (
             f"{coordinator.config_entry.unique_id}_{name}{description.key}"
         )
@@ -170,12 +184,33 @@ class FlashForgeSensor(CoordinatorEntity, SensorEntity):
         self.tool_name = tool_name
 
     @property
-    def native_value(self):
+    def native_value(self) -> str | int | float | None:
         """Return sensor state."""
+        if self.entity_description.value_fnc is None:
+            return None
+
+        if isinstance(self.entity_description, FlashforgeSensorEntityDescription):
+            # If it's a normal sensor we can just pass the printer
+            return self.entity_description.value_fnc(self.coordinator.printer)
+        return None
+
+
+class FlashForgeTempSensor(FlashForgeSensor):
+    """Representation of an FlashForge temperature sensor."""
+
+    entity_description: FlashforgeTempSensorEntityDescription
+
+    @property
+    def native_value(self) -> float | None:
+        """Return sensor state."""
+        if self.entity_description.value_fnc is None:
+            return None
         if self.tool_name:
             # If toolname is set we need to get that tool and pass it to the lambda.
             tool = self.coordinator.printer.extruder_tools.get(self.tool_name)
             if tool is None:
                 tool = self.coordinator.printer.bed_tools.get(self.tool_name)
-            return self.entity_description.value_fnc(tool)
-        return self.entity_description.value_fnc(self.coordinator.printer)
+            if tool is not None:
+                return self.entity_description.value_fnc(tool)
+
+        return None

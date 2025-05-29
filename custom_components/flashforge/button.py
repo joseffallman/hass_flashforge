@@ -3,16 +3,22 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from homeassistant.components.button import ButtonEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import DOMAIN
-from .data_update_coordinator import FlashForgeDataUpdateCoordinator
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from .data_update_coordinator import FlashForgeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -71,11 +77,11 @@ class PrinterButton(ButtonEntity):
 
     def __init__(
         self,
-        name,
-        icon,
-        hass: HomeAssistant,
+        name: str,
+        icon: str,
+        hass: HomeAssistant,  # noqa: ARG002
         coordinator: FlashForgeDataUpdateCoordinator,
-        action,
+        action: Callable,
     ) -> None:
         """Initialize the Demo button entity."""
         self._attr_unique_id = f"{coordinator.config_entry.unique_id}_{name}"
@@ -88,7 +94,12 @@ class PrinterButton(ButtonEntity):
     async def async_press(self) -> None:
         """Send out a persistent notification."""
         result = await self._action()
-        _LOGGER.debug(f"Flashforge printer responded with: {result}")
+        _LOGGER.debug("Flashforge printer responded with: %s", result)
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return self.coordinator.last_update_success
 
 
 class FilePrinterButton(PrinterButton):
@@ -96,12 +107,15 @@ class FilePrinterButton(PrinterButton):
 
     async def async_press(self) -> None:
         """Send out a persistent notification."""
-        entityRegistry = entity_registry.async_get(self.coordinator.hass)
-        select_entity = entityRegistry.async_get_entity_id(
+        entityregistry = entity_registry.async_get(self.coordinator.hass)
+        select_entity = entityregistry.async_get_entity_id(
             Platform.SELECT,
             DOMAIN,
             f"{self.coordinator.config_entry.unique_id}_select",
         )
+        if select_entity is None:
+            return
         select_state = self.coordinator.hass.states.get(select_entity)
-        result = await self._action(file=select_state.state)
-        _LOGGER.debug(f"Flashforge printer responded with: {result}")
+        state = select_state.state if select_state else None
+        result = await self._action(file=state)
+        _LOGGER.debug("Flashforge printer responded with: %s", result)

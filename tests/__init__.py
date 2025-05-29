@@ -17,8 +17,7 @@ def get_schema_default(schema: vol.Schema, key_name: str) -> Any:
         if schema_key == key_name:
             if schema_key.default is not vol.UNDEFINED:
                 return schema_key.default()
-            else:
-                raise AttributeError(f"{key_name} doesn't have a default.")
+            raise AttributeError(f"{key_name} doesn't have a default.")
     raise KeyError(f"{key_name} not in schema.")
 
 
@@ -31,8 +30,7 @@ def get_schema_suggested(schema: vol.Schema, key_name: str) -> Any:
                 and "suggested_value" in schema_key.description
             ):
                 return schema_key.description["suggested_value"]
-            else:
-                raise AttributeError(f"{key_name} doesn't have a suggested value.")
+            raise AttributeError(f"{key_name} doesn't have a suggested value.")
     raise KeyError(f"{key_name} not in schema.")
 
 
@@ -41,8 +39,8 @@ async def init_integration(
     hass: HomeAssistant, skip_setup: bool = False
 ) -> MockConfigEntry:
     """Set up a Flashforge printer in Home Assistant."""
-
     entry = MockConfigEntry(
+        title="Adventurer4",
         domain=DOMAIN,
         unique_id="SNADVA1234567",
         data={

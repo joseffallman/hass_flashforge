@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from ffpp.Printer import Printer
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_IP_ADDRESS, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant, ServiceResponse, SupportsResponse
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.core import (
+    HomeAssistant,
+    ServiceCall,
+    ServiceResponse,
+    SupportsResponse,
+)
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 
 from .const import DOMAIN
 from .data_update_coordinator import FlashForgeDataUpdateCoordinator
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
 
 PLATFORMS = [
     Platform.SENSOR,
@@ -24,54 +32,62 @@ PLATFORMS = [
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  # noqa: PLR0915
     """Set up Flashforge from a config entry."""
     printer = Printer(entry.data[CONF_IP_ADDRESS], port=entry.data[CONF_PORT])
     _LOGGER.debug("FlashForge printer setup")
     coordinator = FlashForgeDataUpdateCoordinator(hass, printer, entry)
-    await coordinator.async_config_entry_first_refresh()
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except (TimeoutError, ConnectionError) as err:
+        _LOGGER.debug("Printer not responding: %s", err)
+        raise ConfigEntryNotReady(err) from err
     # Save the coordinator object to be able to access it later on.
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
-    async def pause(call):
+    async def pause(_: ServiceCall) -> None:
         """Handle the service call."""
         _LOGGER.debug("Pause")
         await printer.connect()
         pr = await printer.network.sendPauseRequest()
-        _LOGGER.debug(f"pauseRequest: {pr} ")
+        _LOGGER.debug("pauseRequest: %s", pr)
 
-    async def continue_print(call):
+    async def continue_print(_: ServiceCall) -> None:
         """Handle the service call."""
         _LOGGER.debug("Continue")
         await printer.connect()
         pr = await printer.network.sendContinueRequest()
-        _LOGGER.debug(f"ContinueRequest: {pr} ")
+        _LOGGER.debug("ContinueRequest: %s", pr)
 
-    async def abort(call):
+    async def abort(_: ServiceCall) -> None:
         """Handle the service call."""
         _LOGGER.debug("Abort")
         await printer.connect()
         pr = await printer.network.sendAbortRequest()
-        _LOGGER.debug(f"AbortRequest: {pr} ")
+        _LOGGER.debug("AbortRequest: %s", pr)
 
-    async def get_file_names(call) -> ServiceResponse:
+    async def get_file_names(_: ServiceCall) -> ServiceResponse:
         """Handle the service call."""
         _LOGGER.debug("Get file names")
         await printer.connect()
         files_list = await printer.network.sendGetFileNames()
-        _LOGGER.debug(f"FileNames: {files_list} ")
+        _LOGGER.debug("FileNames: %s", files_list)
+        if not files_list:
+            return {"files": []}
+
         files_list = [f.removeprefix("/data/") for f in files_list]
         return {"files": files_list}
 
-    async def print_file(call):
+    async def print_file(call: ServiceCall) -> None:
         """Handle the service call."""
         _LOGGER.debug("print_file")
         filename = call.data.get("file_name")
         await printer.connect()
         if printer.machine_status != "READY":
-            raise HomeAssistantError("printer status is not READY")
+            msg = "printer status is not READY"
+            raise HomeAssistantError(msg)
         pr = await printer.network.sendPrintRequest(file=filename)
-        _LOGGER.debug(f"print_file: {pr} ")
+        _LOGGER.debug("print_file: %s", pr)
 
     hass.services.async_register(DOMAIN, "pause", pause)
     hass.services.async_register(DOMAIN, "continue_print", continue_print)

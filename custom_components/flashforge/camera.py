@@ -1,22 +1,26 @@
 """FlashForge camera integration."""
+
 from __future__ import annotations
 
-from contextlib import closing
 import logging
+from contextlib import closing
+from typing import TYPE_CHECKING
 
 import requests
-
 from homeassistant.components.camera import Camera
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import (
     async_aiohttp_proxy_web,
     async_get_clientsession,
 )
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
-from .data_update_coordinator import FlashForgeDataUpdateCoordinator
+
+if TYPE_CHECKING:
+    from homeassistant.config_entries import ConfigEntry
+    from homeassistant.core import HomeAssistant
+    from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+    from .data_update_coordinator import FlashForgeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,6 +42,7 @@ def extract_image_from_mjpeg(stream):
             continue
 
         return data[jpg_start : jpg_end + 2]
+    return data
 
 
 async def async_setup_entry(
@@ -66,7 +71,7 @@ class FlashForgeCamera(Camera):
 
         self._device_id = coordinator.config_entry.unique_id
         self._attr_device_info = coordinator.device_info
-        self._attr_name = f"{coordinator.printer.machine_name} Camera"
+        self._attr_name = "Camera"
         self._attr_unique_id = f"{coordinator.config_entry.unique_id}_camera"
         self._attr_is_streaming = True
 
@@ -74,7 +79,6 @@ class FlashForgeCamera(Camera):
         self, width: int | None = None, height: int | None = None
     ) -> bytes | None:
         """Return a still image response from the camera."""
-
         if not self.available:
             self._attr_is_streaming = False
             _LOGGER.warning(
@@ -94,7 +98,6 @@ class FlashForgeCamera(Camera):
 
     async def handle_async_mjpeg_stream(self, request):
         """Generate an HTTP MJPEG stream from the camera."""
-
         if not self.available:
             self._attr_is_streaming = False
             _LOGGER.warning(
