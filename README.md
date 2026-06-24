@@ -6,9 +6,11 @@
 
 [![hacs][hacsbadge]][hacs]
 
-# For newer printers, check out this repo:
+For newer printers, check out this repo:
 https://github.com/GhostTypes/ff-5mp-hass
 
+
+# About
 _Integration to integrate with [FlashForge 3D printers][flashforge]._
 
 **This integration will set up the following platforms.**
