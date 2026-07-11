@@ -13,7 +13,7 @@
             },
             "user": {
                 "data": {
-                    "ip_addr": "Ip of your 3D printer.",
+                    "ip_address": "Ip of your 3D printer.",
                     "port": "port"
                 },
                 "description": "Enter IP and port-number for your Flashforge 3d Printer. Leave empty to auto discover printer."
