@@ -45,32 +45,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
     # Save the coordinator object to be able to access it later on.
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
+    # Every service call below goes through coordinator.guard instead of
+    # touching `printer`/`printer.network` directly. Without this, a service
+    # call firing at the same moment as the coordinator's poll can crash the
+    # shared connection outright (asyncio raises on two concurrent reads of
+    # the same stream) -- confirmed reproducible, see protocol_guard.py and
+    # plan §3b. The guard's lock serializes them so that can't happen.
+
     async def pause(_: ServiceCall) -> None:
         """Handle the service call."""
         _LOGGER.debug("Pause")
-        await printer.connect()
-        pr = await printer.network.sendPauseRequest()
+        pr = await coordinator.guard.safe_call(printer.network.sendPauseRequest)
         _LOGGER.debug("pauseRequest: %s", pr)
 
     async def continue_print(_: ServiceCall) -> None:
         """Handle the service call."""
         _LOGGER.debug("Continue")
-        await printer.connect()
-        pr = await printer.network.sendContinueRequest()
+        pr = await coordinator.guard.safe_call(printer.network.sendContinueRequest)
         _LOGGER.debug("ContinueRequest: %s", pr)
 
     async def abort(_: ServiceCall) -> None:
         """Handle the service call."""
         _LOGGER.debug("Abort")
-        await printer.connect()
-        pr = await printer.network.sendAbortRequest()
+        pr = await coordinator.guard.safe_call(printer.network.sendAbortRequest)
         _LOGGER.debug("AbortRequest: %s", pr)
 
     async def get_file_names(_: ServiceCall) -> ServiceResponse:
         """Handle the service call."""
         _LOGGER.debug("Get file names")
-        await printer.connect()
-        files_list = await printer.network.sendGetFileNames()
+        files_list = await coordinator.guard.safe_call(printer.network.sendGetFileNames)
         _LOGGER.debug("FileNames: %s", files_list)
         if not files_list:
             return {"files": []}
@@ -82,11 +85,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:  #
         """Handle the service call."""
         _LOGGER.debug("print_file")
         filename = call.data.get("file_name")
-        await printer.connect()
         if printer.machine_status != "READY":
             msg = "printer status is not READY"
             raise HomeAssistantError(msg)
-        pr = await printer.network.sendPrintRequest(file=filename)
+        pr = await coordinator.guard.safe_call(
+            lambda: printer.network.sendPrintRequest(file=filename)
+        )
         _LOGGER.debug("print_file: %s", pr)
 
     hass.services.async_register(DOMAIN, "pause", pause)

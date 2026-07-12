@@ -23,5 +23,11 @@
                 "description": "Found printer {machine_name} on {ip_addr}. Do you want to add this printer to Home Assistant?"
             }
         }
+    },
+    "issues": {
+        "cross_talk_detected": {
+            "title": "Another app may be connected to your FlashForge printer",
+            "description": "The printer is returning data that doesn't match what Home Assistant asked for. This usually means another application (e.g. FlashPrint) is also connected to the printer at the same time. Close other connections to the printer and this should clear on its own."
+        }
     }
 }
