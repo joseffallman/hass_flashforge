@@ -6,9 +6,23 @@
 
 [![hacs][hacsbadge]][hacs]
 
-For newer printers, check out this repo:
+
+# Compatible printers
+
+This integration talks to FlashForge printers (and rebrands of them) over the local
+`~GCODE` protocol on TCP port 8899. Only older printers (sold before ~Sept 2023) use this protocol.
+
+For newer printers (that use the newer protocol), check out this repo instead:
 https://github.com/GhostTypes/ff-5mp-hass
 
+This integration has been confirmed to work with:
+
+| Printer | Tested by | Notes |
+| --- | --- | --- |
+| FlashForge Adventurer 4 | @joseffallman (maintainer) | Reference hardware for [`ffpp`](https://github.com/joseffallman/ffpp) |
+| Monoprice Voxel (= FlashForge Adventurer 3) | @demivis | Tested with Printer Firmware v1.1.5. Sensors (status, temps, progress, move mode) confirmed accurate idle, during preheat, and mid-print. Note: if another client (e.g. FlashPrint-MP) is connected to the printer at the same time, you may see corrupted/mismatched sensor data — disconnect other clients from the printer while using this integration or expect this integration to break while those are connected. |
+
+Running this on a printer that isn't listed? [Open an issue](https://github.com/joseffallman/hass_flashforge/issues) or send a PR adding a row so others know what's supported.
 
 # About
 _Integration to integrate with [FlashForge 3D printers][flashforge]._
