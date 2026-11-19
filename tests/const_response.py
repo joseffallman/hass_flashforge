@@ -12,6 +12,8 @@ MACHINE_INFO = (
     "Mac Address:88:A9:A7:93:86:F8\n \r\n"
     "ok\r\n"
 )
+# Creator 3, two extruders.
+MACHINE_INFO_TWO_EXTRUDERS = MACHINE_INFO.replace("Tool Count: 1", "Tool Count: 2")
 
 # ProgressRequest
 PROGRESS_READY = "CMD M27 Received.\r\nSD printing byte 0/100\r\nok\r\n"
@@ -19,9 +21,16 @@ PROGRESS_PRINTING = (
     "CMD M27 Received.\r\nSD printing byte 11/100\r\nLayer: 44/419\r\nok\r\n"
 )
 
+# Creator 3 reports progress in per mille.
+PROGRESS_PRINTING_PER_MILLE = "CMD M27 Received.\r\nSD printing byte 461/1000\r\nok\r\n"
+
 # TempRequest
 TEMP_READY = "CMD M105 Received.\r\nT0:22/0 B:14/0\r\nok\r\n"
 TEMP_PRINTING = "CMD M105 Received.\r\nT0:198/210 B:48/64\r\nok\r\n"
+# Creator 3 with two extruders.
+TEMP_PRINTING_TWO_EXTRUDERS = (
+    "CMD M105 Received.\r\nT0:210/210 T1:33/0 B:45/45\r\nok\r\n"
+)
 
 # StatusRequest
 STATUS_READY = (

@@ -1,15 +1,25 @@
 """DataUpdateCoordinator for flashforge integration."""
 
+import asyncio
 import logging
-from datetime import timedelta
+import time
+from datetime import datetime, timedelta
 
 from ffpp.Printer import ConnectionStatus, Printer
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
-from .const import DEFAULT_NAME, DOMAIN, MAX_FAILED_UPDATES, SCAN_INTERVAL
+from .const import (
+    DEFAULT_NAME,
+    DOMAIN,
+    MAX_FAILED_UPDATES,
+    SCAN_INTERVAL,
+    UPDATE_TIMEOUT,
+)
+from .estimator import PrintTimeEstimator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -37,12 +47,16 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
             "status": None,
         }
         self.failedupdates = 0
+        self._estimator = PrintTimeEstimator()
+        self.job_remaining: int | None = None
+        self.job_end: datetime | None = None
 
     async def async_update_data(self) -> dict[str, list[str] | str | None]:
         """Update data via API."""
         try:
-            await self.printer.update()
-            files = await self.printer.network.sendGetFileNames()
+            async with asyncio.timeout(UPDATE_TIMEOUT):
+                await self.printer.update()
+                files = await self.printer.network.sendGetFileNames()
         except (TimeoutError, ConnectionError) as err:
             self.failedupdates += 1
             if self.failedupdates >= MAX_FAILED_UPDATES:
@@ -54,8 +68,24 @@ class FlashForgeDataUpdateCoordinator(DataUpdateCoordinator):
             files = []
         files = [f.removeprefix("/data/") for f in files]
         self.failedupdates = 0
+        self._update_job_estimate()
 
         return {"status": self.printer.machine_status, "files": files}
+
+    def _update_job_estimate(self) -> None:
+        self._estimator.update(
+            status=self.printer.machine_status,
+            progress=self.printer.print_percent,
+            now=time.monotonic(),
+        )
+        remaining = self._estimator.remaining
+        if remaining is None:
+            self.job_remaining = None
+            self.job_end = None
+            return
+        self.job_remaining = round(remaining / 60)
+        end = dt_util.utcnow() + timedelta(seconds=remaining)
+        self.job_end = end.replace(second=0, microsecond=0)
 
     async def async_config_entry_first_refresh(self) -> None:
         """Connect to printer and update with machine info."""
