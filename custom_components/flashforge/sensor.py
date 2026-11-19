@@ -12,13 +12,14 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, UnitOfTemperature
+from homeassistant.const import PERCENTAGE, UnitOfTemperature, UnitOfTime
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from datetime import datetime
 
     from ffpp.Printer import Printer
     from ffpp.Printer import temperatures as Tool  # noqa: N812
@@ -35,7 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 class FlashforgeSensorEntityDescription(SensorEntityDescription):
     """Sensor entity description with added value fnc."""
 
-    value_fnc: Callable[[Printer], str | int | None] | None = None
+    value_fnc: Callable[[Printer], str | float | None] | None = None
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,15 @@ class FlashforgeTempSensorEntityDescription(FlashforgeSensorEntityDescription):
     """Sensor entity description for temperature sensors."""
 
     value_fnc: Callable[[Tool], float] | None = None
+
+
+@dataclass(frozen=True)
+class FlashforgeJobSensorEntityDescription(FlashforgeSensorEntityDescription):
+    """Sensor entity description for values estimated by the coordinator."""
+
+    value_fnc: (
+        Callable[[FlashForgeDataUpdateCoordinator], int | datetime | None] | None
+    ) = None
 
 
 SENSORS: tuple[FlashforgeSensorEntityDescription, ...] = (
@@ -81,6 +91,21 @@ SENSORS: tuple[FlashforgeSensorEntityDescription, ...] = (
         key="move_mode",
         icon="mdi:move-resize",
         value_fnc=lambda printer: printer.move_mode,
+    ),
+)
+JOB_SENSORS: tuple[FlashforgeJobSensorEntityDescription, ...] = (
+    FlashforgeJobSensorEntityDescription(
+        key="job_remaining",
+        icon="mdi:timer-sand",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        value_fnc=lambda coordinator: coordinator.job_remaining,
+    ),
+    FlashforgeJobSensorEntityDescription(
+        key="job_end",
+        icon="mdi:clock-end",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fnc=lambda coordinator: coordinator.job_end,
     ),
 )
 TEMP_SENSORS: tuple[FlashforgeSensorEntityDescription, ...] = (
@@ -151,6 +176,11 @@ async def async_setup_entry(
             )
         )
 
+    entities.extend(
+        FlashForgeJobSensor(coordinator=coordinator, description=description)
+        for description in JOB_SENSORS
+    )
+
     async_add_entities(entities)
 
 
@@ -184,7 +214,7 @@ class FlashForgeSensor(CoordinatorEntity, SensorEntity):
         self.tool_name = tool_name
 
     @property
-    def native_value(self) -> str | int | float | None:
+    def native_value(self) -> str | float | datetime | None:
         """Return sensor state."""
         if self.entity_description.value_fnc is None:
             return None
@@ -214,3 +244,16 @@ class FlashForgeTempSensor(FlashForgeSensor):
                 return self.entity_description.value_fnc(tool)
 
         return None
+
+
+class FlashForgeJobSensor(FlashForgeSensor):
+    """Representation of a value estimated by the coordinator."""
+
+    entity_description: FlashforgeJobSensorEntityDescription
+
+    @property
+    def native_value(self) -> int | datetime | None:
+        """Return sensor state."""
+        if self.entity_description.value_fnc is None:
+            return None
+        return self.entity_description.value_fnc(self.coordinator)
