@@ -3,46 +3,31 @@
 from __future__ import annotations
 
 import logging
-from contextlib import closing
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-import requests
-from homeassistant.components.camera import Camera
-from homeassistant.helpers.aiohttp_client import (
-    async_aiohttp_proxy_web,
-    async_get_clientsession,
-)
+from homeassistant.components.camera import Camera, async_get_still_stream
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import DOMAIN
+from .mjpeg import MjpegBroadcaster
 
 if TYPE_CHECKING:
+    import asyncio
+    from collections.abc import Coroutine
+
+    from aiohttp import web
     from homeassistant.config_entries import ConfigEntry
-    from homeassistant.core import HomeAssistant
+    from homeassistant.core import Event, HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
     from .data_update_coordinator import FlashForgeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-
-def extract_image_from_mjpeg(stream):
-    """Take in a MJPEG stream object, return the jpg from it."""
-    data = b""
-
-    for chunk in stream:
-        data += chunk
-        jpg_end = data.find(b"\xff\xd9")
-
-        if jpg_end == -1:
-            continue
-
-        jpg_start = data.find(b"\xff\xd8")
-
-        if jpg_start == -1:
-            continue
-
-        return data[jpg_start : jpg_end + 2]
-    return data
+# A live viewer that receives no new frame for this long has its stream ended,
+# so a camera that has gone quiet does not leave the viewer hanging.
+STREAM_FRAME_TIMEOUT = 15.0
 
 
 async def async_setup_entry(
@@ -59,15 +44,22 @@ async def async_setup_entry(
 
 
 class FlashForgeCamera(Camera):
-    """FlashForge camera object."""
+    """
+    FlashForge camera object.
+
+    The printer's camera serves only one client at a time, so every live
+    viewer and snapshot shares a single upstream connection through
+    ``MjpegBroadcaster`` instead of opening its own.
+    """
 
     def __init__(
-        self, coordinator: FlashForgeDataUpdateCoordinator, mjpeg_url: str
+        self, coordinator: FlashForgeDataUpdateCoordinator, mjpeg_url: str | None
     ) -> None:
         """Initialize."""
         super().__init__()
         self._mjpeg_url = mjpeg_url
         self.coordinator = coordinator
+        self._broadcaster: MjpegBroadcaster | None = None
 
         self._device_id = coordinator.config_entry.unique_id
         self._attr_device_info = coordinator.device_info
@@ -75,42 +67,82 @@ class FlashForgeCamera(Camera):
         self._attr_unique_id = f"{coordinator.config_entry.unique_id}_camera"
         self._attr_is_streaming = True
 
-    def camera_image(
-        self, width: int | None = None, height: int | None = None
+    async def async_added_to_hass(self) -> None:
+        """Create the shared stream once the entity is part of Home Assistant."""
+        await super().async_added_to_hass()
+        if not self._mjpeg_url:
+            _LOGGER.warning("%s has no camera stream URL", self.name)
+            return
+
+        entry = self.platform.config_entry
+
+        def create_task(
+            coro: Coroutine[Any, Any, None], name: str
+        ) -> asyncio.Task[None]:
+            # Background tasks are cancelled automatically when the entry unloads.
+            return entry.async_create_background_task(self.hass, coro, name)
+
+        self._broadcaster = MjpegBroadcaster(
+            async_get_clientsession(self.hass),
+            self._mjpeg_url,
+            name=self.entity_id,
+            task_factory=create_task,
+        )
+        # Close the camera connection when Home Assistant shuts down, so a
+        # viewer that is still connected cannot reopen it.
+        self.async_on_remove(
+            self.hass.bus.async_listen(EVENT_HOMEASSISTANT_STOP, self._async_on_stop)
+        )
+
+    async def _async_on_stop(self, _event: Event) -> None:
+        if self._broadcaster is not None:
+            await self._broadcaster.async_stop()
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Close the shared stream so the printer's camera slot is freed."""
+        if self._broadcaster is not None:
+            await self._broadcaster.async_stop()
+            self._broadcaster = None
+        await super().async_will_remove_from_hass()
+
+    async def async_camera_image(
+        self,
+        width: int | None = None,  # noqa: ARG002
+        height: int | None = None,  # noqa: ARG002
     ) -> bytes | None:
-        """Return a still image response from the camera."""
+        """Return a still image, taken from the shared stream."""
+        if self._broadcaster is None or self._broadcaster.closed:
+            return None
         if not self.available:
-            self._attr_is_streaming = False
-            _LOGGER.warning(
-                "Unable to get still image when %s camera is offline",
-                self.name,
-            )
+            _LOGGER.debug("Unable to get still image while %s is offline", self.name)
             return None
+        return await self._broadcaster.async_get_image()
 
-        try:
-            req = requests.get(self._mjpeg_url, stream=True, timeout=10)
-
-            with closing(req) as response:
-                return extract_image_from_mjpeg(response.iter_content(102400))
-        except requests.exceptions.ConnectionError:
-            self._attr_is_streaming = False
+    async def handle_async_mjpeg_stream(
+        self, request: web.Request
+    ) -> web.StreamResponse | None:
+        """Serve a live MJPEG stream from the shared upstream connection."""
+        broadcaster = self._broadcaster
+        if broadcaster is None or broadcaster.closed:
             return None
-
-    async def handle_async_mjpeg_stream(self, request):
-        """Generate an HTTP MJPEG stream from the camera."""
         if not self.available:
-            self._attr_is_streaming = False
-            _LOGGER.warning(
-                "Attempt to stream when %s camera is offline",
-                self.name,
-            )
+            _LOGGER.warning("Attempt to stream when %s camera is offline", self.name)
             return None
 
-        # connect to stream
-        websession = async_get_clientsession(self.hass)
-        stream_coro = websession.get(self._mjpeg_url)
+        async with broadcaster.subscribe():
+            last_seq = broadcaster.start_sequence()
 
-        return await async_aiohttp_proxy_web(self.hass, request, stream_coro)
+            async def next_image() -> bytes | None:
+                nonlocal last_seq
+                result = await broadcaster.async_next_frame(
+                    last_seq, STREAM_FRAME_TIMEOUT
+                )
+                if result is None:
+                    return None  # ends this viewer's stream
+                last_seq, frame = result
+                return frame
+
+            return await async_get_still_stream(request, next_image, "image/jpeg", 0)
 
     @property
     def available(self) -> bool:
